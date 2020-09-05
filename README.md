@@ -2,7 +2,7 @@
 ## 설치 방법(앱스토어 등록 이전)
 다운 로드: [ync-lms-supporter.zip](https://github.com/960813/ync-lms-supporter/raw/master/ync-lms-supporter.zip)
 1. 다운로드 받은 압축 파일을 압축 해제
-2. 크롬에서 [chrome://extensions](chrome://extensions) 접속
+2. 크롬에서 chrome://extensions 접속
 3. 개발자 모드 활성화
 
     ![](https://github.com/960813/ync-lms-supporter/raw/master/_data/01.png)
