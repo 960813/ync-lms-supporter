@@ -147,6 +147,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             });
     });
+    $('#developedBtn').on('click', ()=>{
+        chrome.tabs.create({
+            'url': 'https://jupiterflow.com'
+        });
+    });
     chrome.tabs.executeScript({
         file: "/vendor/jquery-3.5.1.min.js"
     }, async () => {
