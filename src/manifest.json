@@ -35,5 +35,6 @@
     "https://lms.ync.ac.kr/api/v1/courses/*",
     "https://lms.ync.ac.kr/api/v1/users/self/favorites/courses",
     "https://lms.ync.ac.kr/learningx/api/v1/courses/*/sections/learnstatus_db"
-  ]
+  ],
+  "content_security_policy": "script-src 'self' 'unsafe-eval' https://code.jquery.com/jquery-3.5.1.slim.min.js; object-src 'self'"
 }
