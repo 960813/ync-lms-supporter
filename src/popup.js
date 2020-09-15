@@ -109,20 +109,28 @@ const extractLearnStatus = (course_id, user_info, xnApiToken) => {
                     const unlock_at = section["unlock_at"];
                     const due_at = section["due_at"];
                     $(section["subsections"]).each((index, subsection) => {
+                        const current_at = new Date();
                         $(subsection["units"]).each((index, unit) => {
                             $(unit["components"]).each((index, component) => {
-                                const current_at = new Date();
 
-                                if ((!unlock_at || !due_at) ||
-                                    (new Date(unlock_at) <= current_at && current_at <= new Date(due_at))) {
+                                if ((!unlock_at && !due_at && !component["unlock_at"] && !component["due_at"]) ||
+                                    (unlock_at &&
+                                        (new Date(unlock_at) <= current_at)) ||
+                                    (component["unlock_at"] &&
+                                        (new Date(component["unlock_at"]) <= current_at))) {
+
+                                    const final_unlock_at = unlock_at ? unlock_at : component["unlock_at"];
+                                    const final_due_at = due_at ? due_at : component["due_at"];
+
                                     if (!component["completed"]) {
+                                        console.log(component);
                                         assignments.push({
                                             component_title: component["title"],
                                             component_id: component["component_id"],
                                             section_id: component["section_id"],
                                             unit_id: component["unit_id"],
-                                            unlock_at: dateBuilder(unlock_at),
-                                            due_at: dateBuilder(due_at)
+                                            unlock_at: dateBuilder(final_unlock_at),
+                                            due_at: dateBuilder(final_due_at)
                                         });
                                     }
                                 }
@@ -130,7 +138,6 @@ const extractLearnStatus = (course_id, user_info, xnApiToken) => {
                         });
                     });
                 });
-
                 resolve(assignments);
             }
         });
@@ -147,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             });
     });
-    $('#developedBtn').on('click', ()=>{
+    $('#developedBtn').on('click', () => {
         chrome.tabs.create({
             'url': 'https://jupiterflow.com'
         });
@@ -176,6 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                             lecturesAssignments.push(lectureData);
                                         });
                                 }
+                                console.log(lecturesAssignments);
 
 
                                 let result_html_markup = `
