@@ -120,7 +120,24 @@ const extractLearnStatus = (course_id, user_info, xnApiToken) => {
                                         (new Date(component["unlock_at"]) <= current_at))) {
 
                                     const final_unlock_at = unlock_at ? unlock_at : component["unlock_at"];
-                                    const final_due_at = due_at ? due_at : component["due_at"];
+
+                                    const final_due_at = (() => {
+                                        let ret;
+
+                                        if (!due_at) {
+                                            ret = component["due_at"];
+                                        } else if (!component["due_at"]) {
+                                            ret = due_at;
+                                        } else {
+                                            if (new Date(due_at) > new Date(component["due_at"])) {
+                                                ret = component["due_at"];
+                                            } else {
+                                                ret = due_at;
+                                            }
+                                        }
+
+                                        return ret;
+                                    })();
 
                                     if (!component["completed"]) {
                                         console.log(component);
@@ -184,7 +201,6 @@ document.addEventListener('DOMContentLoaded', function () {
                                         });
                                 }
                                 console.log(lecturesAssignments);
-
 
                                 let result_html_markup = `
 <!doctype html>
