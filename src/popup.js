@@ -166,6 +166,59 @@ const extractLearnStatus = (course_id, user_info, xnApiToken) => {
     });
 };
 
+const get_lectures = () => {
+    $('#init_btn').css('display', 'none');
+    $('#get_list_btn').css('display', 'none');
+    $('#download_btn').css('display', 'none');
+    $('#loading_splash').css('display', 'flex');
+    chrome.tabs.executeScript({
+        file: "/vendor/jquery-3.5.1.min.js"
+    }, () => {
+        getUserInfo()
+            .then(user_info => {
+                extractLectures()
+                    .then(lectures => {
+                        getXnApiToken(lectures)
+                            .then((xnApiToken) => {
+                                const lecturesAssignments = [];
+                                let lecture_cnt = 0;
+                                (() => {
+                                    return lectures.reduce(async (promise, lecture) => {
+                                        await promise;
+                                        return extractLearnStatus(lecture.id, user_info, xnApiToken)
+                                            .then((assignments) => {
+                                                const lectureData = {
+                                                    name: lecture.name,
+                                                    assignments: []
+                                                };
+                                                assignments.forEach((assignment) => {
+                                                    assignment["url"] = lectureUrlBuilder(lecture.id, assignment.section_id, assignment.unit_id, assignment.component_id, user_info);
+                                                    lectureData.assignments.push(assignment);
+                                                });
+                                                lecturesAssignments.push(lectureData);
+                                                console.log('push');
+                                                console.log(lectureData);
+                                                lecture_cnt += 1.0;
+                                                const progress = lecture_cnt / lectures.length * 100.0;
+                                                console.log(lecture_cnt + '/' + lectures.length);
+                                                console.log(progress);
+                                                $('#loading_splash > .progress-bar')
+                                                    .attr('aria-valuenow', progress)
+                                                    .css('width', progress + '%')
+                                                    .text(Math.round(progress) + '%');
+                                            });
+                                    }, Promise.resolve());
+                                })()
+                                    .then(() => {
+                                        console.log(lecturesAssignments);
+                                        generate_lecture_list(lecturesAssignments);
+                                    });
+                            });
+                    });
+            })
+    });
+};
+
 const DOMContentLoad = () => {
     /*
     DOM 초기화 관련
@@ -226,65 +279,10 @@ const DOMContentLoad = () => {
                     chrome.runtime.sendMessage({ videos: d });
                 });
                 `
-        });
-    });
-
-    $('#area > #get_list_btn').on('click', () => {
-        $('#init_btn').css('display', 'none');
-        $('#get_list_btn').css('display', 'none');
-        $('#download_btn').css('display', 'none');
-        $('#loading_splash').css('display', 'flex');
-        chrome.tabs.executeScript({
-            file: "/vendor/jquery-3.5.1.min.js"
-        }, () => {
-            getUserInfo()
-                .then(user_info => {
-                    extractLectures()
-                        .then(lectures => {
-                            getXnApiToken(lectures)
-                                .then((xnApiToken) => {
-                                    const lecturesAssignments = [];
-                                    let lecture_cnt = 0;
-                                    (() => {
-                                        return lectures.reduce(async (promise, lecture) => {
-                                            await promise;
-                                            return extractLearnStatus(lecture.id, user_info, xnApiToken)
-                                                .then((assignments) => {
-                                                    const lectureData = {
-                                                        name: lecture.name,
-                                                        assignments: []
-                                                    };
-                                                    assignments.forEach((assignment) => {
-                                                        assignment["url"] = lectureUrlBuilder(lecture.id, assignment.section_id, assignment.unit_id, assignment.component_id, user_info);
-                                                        lectureData.assignments.push(assignment);
-                                                    });
-                                                    lecturesAssignments.push(lectureData);
-                                                    console.log('push');
-                                                    console.log(lectureData);
-                                                    lecture_cnt += 1.0;
-                                                    const progress = lecture_cnt / lectures.length * 100.0;
-                                                    console.log(lecture_cnt + '/' + lectures.length);
-                                                    console.log(progress);
-                                                    $('#loading_splash > .progress-bar')
-                                                        .attr('aria-valuenow', progress)
-                                                        .css('width', progress + '%')
-                                                        .text(Math.round(progress) + '%');
-                                                });
-                                        }, Promise.resolve());
-                                    })()
-                                        .then(() => {
-                                            console.log(lecturesAssignments);
-                                            generate_lecture_list(lecturesAssignments);
-                                        });
-                                });
-                        });
-                })
-        });
-    });
-
-    $('#developedBtn').on('click', () => {
-        chrome.tabs.create({
-            'url': 'https://jupiterflow.com'
+        }, result => {
+            if (!result) {
+                get_lectures();
+            }
         });
     });
 
@@ -297,6 +295,7 @@ const DOMContentLoad = () => {
             $(download_list_group)
                 .addClass('list-group')
                 .css('height', '100%')
+                .css('width', '100%')
                 .css('overflow-y', 'scroll');
 
             $('#download_btn')
@@ -349,7 +348,17 @@ const DOMContentLoad = () => {
                         .css('width', '250px')
                         .css('height', '200px');
                 });
+        } else {
+            get_lectures();
         }
+    });
+
+    $('#area > #get_list_btn').on('click', get_lectures);
+
+    $('#developedBtn').on('click', () => {
+        chrome.tabs.create({
+            'url': 'https://jupiterflow.com'
+        });
     });
 };
 
