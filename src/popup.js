@@ -14,7 +14,7 @@ const getXnApiToken = (lectures) => {
         }, (cookie) => {
             if (!cookie) {
                 $('#area > input[type=button]#init_btn').css('display', 'block');
-                $('#area > img').css('display', 'none');
+                $('#loading_splash').css('display', 'none');
                 reject();
             } else {
                 resolve(cookie.value);
@@ -110,7 +110,7 @@ const extractLearnStatus = (course_id, user_info, xnApiToken) => {
                 const assignments = [];
 
                 $(sections).each((index, section) => {
-                    console.log('sections');
+                    console.log(section);
                     const unlock_at = section["unlock_at"];
                     const due_at = section["due_at"];
                     $(section["subsections"]).each((index, subsection) => {
@@ -166,7 +166,31 @@ const extractLearnStatus = (course_id, user_info, xnApiToken) => {
     });
 };
 
-document.addEventListener('DOMContentLoaded', function () {
+const DOMContentLoad = () => {
+    /*
+    DOM 초기화 관련
+     */
+    $('#area')
+        .html(`
+    <input type="button" class="btn btn-primary" id="init_btn" value="초기 설정"
+           style="display:none; width: 70%; height: 35%; font-size: 1rem; font-weight: bold;">
+    <input type="button" class="btn btn-primary" id="get_list_btn" value="목록 가져오기">
+    <input type="button" class="btn btn-info d-none mt-3" id="download_btn" value="영상 다운로드">
+    <div class="container">
+        <!--        <img src="loading.gif" id="loading_splash" style="display: none;">-->
+        <div class="progress" style="height: 1.75rem; display: none" id="loading_splash">
+            <div class="progress-bar progress-bar-striped active progress-bar-animated" role="progressbar"
+                 aria-valuenow="0"
+                 aria-valuemin="0" aria-valuemax="100" style="width: 0; font-weight: bold;"></div>
+        </div>
+    </div>
+        `)
+        .css('width', '200px')
+        .css('height', '150px');
+
+
+    $('#lms_logo').on('click', DOMContentLoad);
+
     $('#area > #init_btn').on('click', () => {
         extractLectures()
             .then(lectures => {
@@ -180,61 +204,36 @@ document.addEventListener('DOMContentLoaded', function () {
         active: true, currentWindow: true
     }, function (tabs) {
         chrome.tabs.executeScript(tabs[0].id, {
-                code: `
-                if(document.getElementById('tool_content')) {
-                    document.getElementById('tool_content').contentWindow.document.getElementsByClassName('xnvc-video-frame')[0].src;
-                } else {
-                    document.getElementsByClassName('xnvc-video-frame')[0].src;
-                }
-                `
-            },
-            function (data) {
-                if (data[0]) {
-                    const lecture_code = /https:\/\/lms.ync.ac.kr\/learningx\/coursebuilder\/view\/contents\/([a-z0-9]*)?/.exec(data[0])[1];
-                    console.log(lecture_code);
-                    $('#download_btn')
-                        .removeClass('d-none')
-                        .on('click', () => {
-                            $.ajax({
-                                url: "https://ymooc.ync.ac.kr/viewer/ssplayer/uniplayer_support/content.php?content_id=" + lecture_code,
-                                type: "GET",
-                                complete: (data) => {
-                                    const xml = new DOMParser().parseFromString(data.responseText, "text/xml");
-
-                                    const content_playing_info = xml.getElementsByTagName('content_playing_info')[0];
-                                    const service_root = xml.getElementsByTagName('service_root')[0];
-
-                                    const content_type = content_playing_info.getElementsByTagName('content_type')[0].childNodes[0].nodeValue;
-
-                                    let mediaSrc = '';
-                                    switch (content_type) {
-                                        case 'video1':
-                                            mediaSrc = content_playing_info.querySelector('main_media > desktop > html5 > media_uri').childNodes[0].nodeValue;
-                                            break;
-                                        case 'upf':
-                                            const main_media = content_playing_info.querySelector('story_list > story > main_media_list > main_media').childNodes[0].nodeValue
-                                            const media_uri = service_root.querySelector('media > media_uri[method="progressive"]').childNodes[0].nodeValue;
-                                            mediaSrc = media_uri.replace('[MEDIA_FILE]', main_media);
-                                            break;
-                                    }
-                                    console.log(mediaSrc);
-                                    chrome.tabs.create({
-                                        url: mediaSrc
-                                    });
-                                }
+            code: `                
+                async function getData() {          
+                    if(document.getElementById('tool_content')) {
+                        var frame = document.getElementById('tool_content').contentWindow.document.getElementsByClassName('xnvc-video-frame');
+                    } else {
+                        var frame = document.getElementsByClassName('xnvc-video-frame');
+                    }
+                    console.log(frame);
+                    return Promise.all(
+                        Array.from(frame).map(r => {
+                            return Promise.resolve({
+                                    src: r.src,
+                                    title: r.parentElement.parentElement.parentElement.parentElement.parentElement.getElementsByClassName('xnct-title')[0].innerText
                             });
-                        });
+                        })
+                    );
                 }
-                // var videoSrc = data[0].contentWindow.document.getElementsByClassName('vc-vplay-video')[0].src
-            });
+                getData()
+                .then(d=>{
+                    chrome.runtime.sendMessage({ videos: d });
+                });
+                `
+        });
     });
-
 
     $('#area > #get_list_btn').on('click', () => {
         $('#init_btn').css('display', 'none');
         $('#get_list_btn').css('display', 'none');
         $('#download_btn').css('display', 'none');
-        $('#loading_splash').css('display', 'block');
+        $('#loading_splash').css('display', 'flex');
         chrome.tabs.executeScript({
             file: "/vendor/jquery-3.5.1.min.js"
         }, () => {
@@ -245,8 +244,10 @@ document.addEventListener('DOMContentLoaded', function () {
                             getXnApiToken(lectures)
                                 .then((xnApiToken) => {
                                     const lecturesAssignments = [];
+                                    let lecture_cnt = 0;
                                     (() => {
-                                        return lectures.reduce(function (promise, lecture) {
+                                        return lectures.reduce(async (promise, lecture) => {
+                                            await promise;
                                             return extractLearnStatus(lecture.id, user_info, xnApiToken)
                                                 .then((assignments) => {
                                                     const lectureData = {
@@ -258,6 +259,16 @@ document.addEventListener('DOMContentLoaded', function () {
                                                         lectureData.assignments.push(assignment);
                                                     });
                                                     lecturesAssignments.push(lectureData);
+                                                    console.log('push');
+                                                    console.log(lectureData);
+                                                    lecture_cnt += 1.0;
+                                                    const progress = lecture_cnt / lectures.length * 100.0;
+                                                    console.log(lecture_cnt + '/' + lectures.length);
+                                                    console.log(progress);
+                                                    $('#loading_splash > .progress-bar')
+                                                        .attr('aria-valuenow', progress)
+                                                        .css('width', progress + '%')
+                                                        .text(Math.round(progress) + '%');
                                                 });
                                         }, Promise.resolve());
                                     })()
@@ -276,7 +287,73 @@ document.addEventListener('DOMContentLoaded', function () {
             'url': 'https://jupiterflow.com'
         });
     });
-});
+
+    chrome.runtime.onMessage.addListener(function (msg) {
+        console.log(msg);
+        if (msg.videos && msg.videos.length !== 0) {
+            const videos = msg.videos;
+
+            const download_list_group = document.createElement('div');
+            $(download_list_group)
+                .addClass('list-group')
+                .css('height', '100%')
+                .css('overflow-y', 'scroll');
+
+            $('#download_btn')
+                .removeClass('d-none')
+                .on('click', () => {
+                    for (let i = 0; i < videos.length; ++i) {
+                        const src = videos[i].src;
+                        const title = videos[i].title;
+                        const lecture_code = /https:\/\/lms.ync.ac.kr\/learningx\/coursebuilder\/view\/contents\/([a-z0-9]*)?/.exec(src)[1];
+
+                        $.ajax({
+                            url: "https://ymooc.ync.ac.kr/viewer/ssplayer/uniplayer_support/content.php?content_id=" + lecture_code,
+                            type: "GET",
+                            complete: (data) => {
+                                const xml = new DOMParser().parseFromString(data.responseText, "text/xml");
+
+                                const content_playing_info = xml.getElementsByTagName('content_playing_info')[0];
+                                const service_root = xml.getElementsByTagName('service_root')[0];
+
+                                const content_type = content_playing_info.getElementsByTagName('content_type')[0].childNodes[0].nodeValue;
+
+                                let mediaSrc = '';
+                                switch (content_type) {
+                                    case 'video1':
+                                        mediaSrc = content_playing_info.querySelector('main_media > desktop > html5 > media_uri').childNodes[0].nodeValue;
+                                        break;
+                                    case 'upf':
+                                        const main_media = content_playing_info.querySelector('story_list > story > main_media_list > main_media').childNodes[0].nodeValue
+                                        const media_uri = service_root.querySelector('media > media_uri[method="progressive"]').childNodes[0].nodeValue;
+                                        mediaSrc = media_uri.replace('[MEDIA_FILE]', main_media);
+                                        break;
+                                }
+
+                                const download_list_group_item = document.createElement('a');
+                                $(download_list_group_item)
+                                    .addClass(['list-group-item', 'list-group-item-action'])
+                                    .attr('href', '#')
+                                    .text(title)
+                                    .on('click', () => {
+                                        chrome.tabs.create({
+                                            url: mediaSrc
+                                        });
+                                    });
+                                download_list_group.appendChild(download_list_group_item);
+                            }
+                        });
+                    }
+                    $('#area')
+                        .html(download_list_group)
+                        .css('width', '250px')
+                        .css('height', '200px');
+                });
+        }
+    });
+};
+
+document.addEventListener('DOMContentLoaded', DOMContentLoad);
 
 const generate_lecture_list = (lecturesAssignments) => {
     let result_html_markup = `

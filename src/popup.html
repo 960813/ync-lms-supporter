@@ -17,20 +17,26 @@
 </head>
 <body>
 
-<div style="font-weight:bold; color:white; text-align: center; background-color: rgb(65,86,166); padding: 0.5rem 0;">
-    YNC LMS Supporter
-</div>
+<input id="lms_logo" type="button" class="btn btn-success  btn-block" style="border-radius: 0"
+       value="YNC LMS Supporter">
 
-<div id="area" style=" width: 200px; height: 200px; justify-content: center; align-items: center;"
+<div id="area" style=" width: 200px; height: 150px; justify-content: center; align-items: center;"
      class="d-flex flex-column">
     <input type="button" class="btn btn-primary" id="init_btn" value="초기 설정"
            style="display:none; width: 70%; height: 35%; font-size: 1rem; font-weight: bold;">
-    <input type="button" class="btn btn-primary mb-3" id="get_list_btn" value="목록 가져오기">
-    <input type="button" class="btn btn-info d-none" id="download_btn" value="영상 다운로드">
-    <img src="loading.gif" id="loading_splash" style="display: none;">
+    <input type="button" class="btn btn-primary" id="get_list_btn" value="목록 가져오기">
+    <input type="button" class="btn btn-info d-none mt-3" id="download_btn" value="영상 다운로드">
+    <div class="container">
+        <!--        <img src="loading.gif" id="loading_splash" style="display: none;">-->
+        <div class="progress" style="height: 1.75rem; display: none" id="loading_splash">
+            <div class="progress-bar progress-bar-striped active progress-bar-animated" role="progressbar"
+                 aria-valuenow="0"
+                 aria-valuemin="0" aria-valuemax="100" style="width: 0; font-weight: bold;"></div>
+        </div>
+    </div>
 </div>
 
-<input id="developedBtn" type="button" class="btn btn-success btn-block" style="border-radius: 0"
+<input id="developedBtn" type="button" class="btn btn-block btn-success" style="border-radius: 0"
        value="Developed by Jinssssun">
 
 </body>
